@@ -15,8 +15,14 @@ export class ProvidersController {
     async getUsdCRates(): Promise<ExchangeRate[] | null> {
         return this.providersService.getUsdCRates();
     }
+
     @Get('/usdt-rates')
     async getUsdTRates(): Promise<ExchangeRate[] | null> {
         return this.providersService.getUsdTRates();
+    }
+
+    @Get('/mep-rates')
+    async getMepRates(): Promise<ExchangeRate[] | null> {
+        return this.providersService.getMepRates();
     }
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { EXCHANGE_METADATA } from '../utils/exchange.metadata';
+import * as cheerio from 'cheerio';
 
 export interface ExchangeRate {
     bid: number;
@@ -16,7 +17,10 @@ export class ProvidersService {
     private readonly COMPARADOLAR_URL = "https://api.comparadolar.ar"
     private readonly CRIPTOYA_URL = "https://criptoya.com/api"
     private readonly DEFAULT_LOGO = 'https://cdn-icons-png.flaticon.com/512/10449/10449543.png';
-    
+    private readonly BONISTAS_URL = 'https://bonistas.com/';
+
+    // --- MÉTODOS DE COMPARADOLAR ---
+
     async getBankUsdRates(): Promise<ExchangeRate[] | null> {
         try {
             const { data } = await firstValueFrom(
@@ -34,7 +38,7 @@ export class ProvidersService {
         }
     }
 
-// --- MÉTODOS DE CRIPTOYA ---
+    // --- MÉTODOS DE CRIPTOYA ---
 
     async getUsdCRates() {
         return this.fetchCriptoYaData('usdc');
@@ -56,7 +60,7 @@ export class ProvidersService {
                     bid: value.totalBid,
                     ask: value.totalAsk,
                     logoUrl: meta ? meta.logo : this.DEFAULT_LOGO,
-                    name: meta ? meta.name : key.toUpperCase(), // Si no hay meta, lo ponemos en mayúsculas
+                    name: meta ? meta.name : key.toUpperCase(),
                 };
             });
         } catch (error) {
@@ -64,4 +68,49 @@ export class ProvidersService {
             return null;
         }
     }
+    // --- MÉTODO PARA OBTENER TASAS MEP ---
+
+    async getMepRates(): Promise<ExchangeRate[] | null> {
+        try {
+            const { data: html } = await firstValueFrom(
+                this.httpService.get(this.BONISTAS_URL, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    }
+                })
+            );
+
+            return this.scrapeMepRatesFromBonistas(html);
+        } catch (error) {
+            console.error('Error fetching Bonistas:', error.message);
+            return null;
+        }
+    }
+
+    private scrapeMepRatesFromBonistas(html: string): ExchangeRate[] {
+        const $ = cheerio.load(html);
+        const results: ExchangeRate[] = [];
+
+        $('table tbody tr').each((_, row) => {
+            const cells = $(row).find('td');
+            const ticker = $(cells[0]).text().trim();
+            const mepRaw = $(cells[4]).text().trim();
+
+            if (ticker && mepRaw) {
+                const price = parseFloat(mepRaw.replace(/[^0-9.]/g, ''));
+
+                if (!isNaN(price)) {
+                    results.push({
+                        bid: price,
+                        ask: price,
+                        logoUrl: "",
+                        name: ticker,
+                    });
+                }
+            }
+        });
+
+        return results;
+    }
+
 }
