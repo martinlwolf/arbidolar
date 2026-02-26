@@ -25,4 +25,9 @@ export class ProvidersController {
     async getMepRates(): Promise<ExchangeRate[] | null> {
         return this.providersService.getMepRates();
     }
+
+    @Get('/blue-rate')
+    async getBlueRate(): Promise<ExchangeRate | null> {
+        return this.providersService.getDolarBlueRate();
+    }
 }

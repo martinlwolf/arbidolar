@@ -18,6 +18,7 @@ export class ProvidersService {
     private readonly CRIPTOYA_URL = "https://criptoya.com/api"
     private readonly DEFAULT_LOGO = 'https://cdn-icons-png.flaticon.com/512/10449/10449543.png';
     private readonly BONISTAS_URL = 'https://bonistas.com/';
+    private readonly DOLARAPI_URL = 'https://dolarapi.com/v1/dolares/blue';
 
     // --- MÉTODOS DE COMPARADOLAR ---
 
@@ -26,12 +27,14 @@ export class ProvidersService {
             const { data } = await firstValueFrom(
                 this.httpService.get(`${this.COMPARADOLAR_URL}/usd`)
             );
-            return data.map(({ bid, ask, logoUrl, prettyName: name }) => ({
-                bid,
-                ask,
-                logoUrl,
-                name,
-            }));
+            return data
+                .filter(({ bid }) => !this.isBadValue(bid))
+                .map(({ bid, ask, logoUrl, prettyName: name }) => ({
+                    bid,
+                    ask,
+                    logoUrl,
+                    name,
+                }));
         } catch (error) {
             console.error('Error bringing bank usd rates from comparadolar', error);
             return null;
@@ -54,15 +57,17 @@ export class ProvidersService {
                 this.httpService.get(`${this.CRIPTOYA_URL}/${coin}/ars/0.1`)
             );
 
-            return Object.entries(data).map(([key, value]: [string, any]) => {
-                const meta = EXCHANGE_METADATA[key];
-                return {
-                    bid: value.totalBid,
-                    ask: value.totalAsk,
-                    logoUrl: meta ? meta.logo : this.DEFAULT_LOGO,
-                    name: meta ? meta.name : key.toUpperCase(),
-                };
-            });
+            return Object.entries(data)
+                .filter(([_, value]: [string, any]) => !this.isBadValue(value.totalBid))
+                .map(([key, value]: [string, any]) => {
+                    const meta = EXCHANGE_METADATA[key];
+                    return {
+                        bid: value.totalBid,
+                        ask: value.totalAsk,
+                        logoUrl: meta ? meta.logo : this.DEFAULT_LOGO,
+                        name: meta ? meta.name : key.toUpperCase(),
+                    };
+                });
         } catch (error) {
             console.error(`Error bringing ${coin} rates from CriptoYa`, error);
             return null;
@@ -83,6 +88,23 @@ export class ProvidersService {
             return this.scrapeMepRatesFromBonistas(html);
         } catch (error) {
             console.error('Error fetching Bonistas:', error.message);
+            return null;
+        }
+    }
+
+    async getDolarBlueRate(): Promise<ExchangeRate | null> {
+        try {
+            const { data } = await firstValueFrom(
+                this.httpService.get(this.DOLARAPI_URL)
+            );
+            return {
+                bid: data.compra,
+                ask: data.venta,
+                logoUrl: this.DEFAULT_LOGO,
+                name: "Dolar Blue",
+            };
+        } catch (error) {
+            console.error('Error fetching DolarAPI Blue rate:', error.message);
             return null;
         }
     }
@@ -111,6 +133,11 @@ export class ProvidersService {
         });
 
         return results;
+    }
+
+        // Filtra valores fuera de rango
+    private isBadValue(value: number): boolean {
+        return value < 800 || value > 2000;
     }
 
 }
