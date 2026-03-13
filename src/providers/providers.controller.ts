@@ -1,12 +1,15 @@
 import { Controller, Get } from '@nestjs/common';
 import { ProvidersService } from './providers.service';
 import { ExchangeRate } from './providers.service';
+import { UseInterceptors} from '@nestjs/common';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 
 @Controller('providers')
+@UseInterceptors(CacheInterceptor)
 export class ProvidersController {
     constructor(private readonly providersService: ProvidersService){}
 
-    @Get('/bankusd-rates')
+    @Get('/bank-rates')
     async getBankUsdRates(): Promise<ExchangeRate[] | null> {
         return this.providersService.getBankUsdRates();
     }

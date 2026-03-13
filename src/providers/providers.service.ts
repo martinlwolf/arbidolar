@@ -36,8 +36,7 @@ export class ProvidersService {
                     name,
                 }));
         } catch (error) {
-            console.error('Error bringing bank usd rates from comparadolar', error);
-            return null;
+            throw new Error('Error bringing bank usd rates from comparadolar: ' + (error?.message || error));
         }
     }
 
@@ -69,8 +68,7 @@ export class ProvidersService {
                     };
                 });
         } catch (error) {
-            console.error(`Error bringing ${coin} rates from CriptoYa`, error);
-            return null;
+            throw new Error(`Error bringing ${coin} rates from CriptoYa: ` + (error?.message || error));
         }
     }
     // --- MÉTODO PARA OBTENER TASAS MEP ---
@@ -87,8 +85,7 @@ export class ProvidersService {
 
             return this.scrapeMepRatesFromBonistas(html);
         } catch (error) {
-            console.error('Error fetching Bonistas:', error.message);
-            return null;
+            throw new Error('Error fetching Bonistas: ' + (error?.message || error));
         }
     }
 
@@ -104,8 +101,7 @@ export class ProvidersService {
                 name: "Dolar Blue",
             };
         } catch (error) {
-            console.error('Error fetching DolarAPI Blue rate:', error.message);
-            return null;
+            throw new Error('Error fetching DolarAPI Blue rate: ' + (error?.message || error));
         }
     }
 
